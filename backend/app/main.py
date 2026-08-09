@@ -4,9 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.core.config import settings
-from backend.app.database.session import init_db
 from backend.app.api.endpoints.analysis import router as analysis_router
-from backend.app.api.endpoints.history import router as history_router
 
 # Setup Logging
 logging.basicConfig(
@@ -19,15 +17,10 @@ logger = logging.getLogger("phishing_platform")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup actions
-    logger.info("Initializing Phishing Intelligence Platform backend...")
-    
-    # Create tables
-    await init_db()
-    
+    logger.info("Initializing PhishIntel backend...")
     yield
-    
     # Shutdown actions
-    logger.info("Shutting down Phishing Intelligence Platform backend...")
+    logger.info("Shutting down PhishIntel backend...")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -47,7 +40,6 @@ app.add_middleware(
 
 # Register routes
 app.include_router(analysis_router, prefix=f"{settings.API_V1_STR}/analyze", tags=["analysis"])
-app.include_router(history_router, prefix=settings.API_V1_STR, tags=["dashboard"])
 
 @app.get("/", tags=["health"])
 def root_route():
@@ -56,6 +48,11 @@ def root_route():
         "docs_url": "/docs",
         "status": "active"
     }
+
+# Health check route for Streamlit connection checks
+@app.get(f"{settings.API_V1_STR}/health", tags=["health"])
+def health_check():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     import uvicorn

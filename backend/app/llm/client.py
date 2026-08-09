@@ -55,12 +55,6 @@ class LLMAnalyst:
                 {"url": u.get("url"), "flags": u.get("flags"), "is_suspicious": u.get("is_suspicious")}
                 for u in urls
             ],
-            "headers_analysis": {
-                "findings": headers.get("findings", []),
-                "spf_pass": headers.get("spf_pass"),
-                "dkim_pass": headers.get("dkim_pass"),
-                "dmarc_pass": headers.get("dmarc_pass")
-            },
             "email_body_snippet": email_text[:500] + ("..." if len(email_text) > 500 else "")
         }
 
@@ -139,7 +133,6 @@ class LLMAnalyst:
         verdict = payload["prediction_verdict"]
         rules = payload["rules_triggered"]
         urls = payload["urls_analyzed"]
-        headers = payload["headers_analysis"]
         
         threat_type = "Safe Email"
         severity = "Low"
@@ -163,8 +156,6 @@ class LLMAnalyst:
         for u in urls:
             if u["is_suspicious"]:
                 indicators.append(f"URL: {u['url']}")
-        for f in headers["findings"]:
-            indicators.append(f"Header: {f}")
 
         summary = f"Automated scan triggered a composite risk score of {risk_score}%. "
         if rules:
@@ -172,10 +163,8 @@ class LLMAnalyst:
         if urls:
             susp_count = sum(1 for u in urls if u["is_suspicious"])
             summary += f"Found {len(urls)} URLs in the body, with {susp_count} flagged as suspicious. "
-        if headers["findings"]:
-            summary += f"Email header verification raised discrepancies: {', '.join(headers['findings'])}."
-        if not rules and not any(u["is_suspicious"] for u in urls) and not headers["findings"]:
-            summary += "No phishing rules, suspicious URLs, or header anomalies were detected."
+        if not rules and not any(u["is_suspicious"] for u in urls):
+            summary += "No phishing rules or suspicious URLs were detected."
 
         recommendations = "No immediate phishing action is required based on the available indicators. "
         if severity in ["High", "Critical"]:
